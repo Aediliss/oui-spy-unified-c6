@@ -1,6 +1,7 @@
 ==============================================================================
   OUI SPY UNIFIED BLUE -- Production Flash Instructions
-  Board: XIAO ESP32-S3
+  Boards: XIAO ESP32-S3 (default)  |  XIAO ESP32-C6 (use: flash.py --c6)
+  The steps below are for the S3; see "XIAO ESP32-C6 VARIANT" at the bottom.
 ==============================================================================
 
   WHAT'S IN THE BOX

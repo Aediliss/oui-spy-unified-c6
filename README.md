@@ -10,15 +10,13 @@ One device. Six firmware modes. Select from a boot menu, reboot, and go.
 > smaller; everything else is the same. Full details, wiring, and toolchain
 > setup: **[PORTING_ESP32C6.md](PORTING_ESP32C6.md)**.
 
----
-
-## Web Flasher
-
-Flash straight from the browser — no Python, no PlatformIO, no drivers to think about:
-
-**https://colonelpanichacks.github.io/oui-spy-unified-blue/**
-
-Chrome, Edge, or Opera on desktop (Web Serial API). Plug in the XIAO ESP32-S3 with a USB-C data cable, click **Connect & Flash**, pick the serial port. The page always serves the latest firmware committed to `master`.
+> **This is a fork.** The original six-mode firmware is by
+> **[colonelpanichacks](https://github.com/colonelpanichacks/oui-spy-unified-blue)**
+> and targets the XIAO ESP32-S3. This repository adds the **XIAO ESP32-C6**
+> target and keeps the S3 build working. Flash it with the tools included here
+> (`flash.py` or PlatformIO) — see **[Flashing](#flashing)**. (There is no
+> hosted web flasher for this fork; the upstream project's web flasher only
+> serves the original author's S3 builds.)
 
 ---
 
@@ -177,13 +175,18 @@ Each mode creates its own AP. When switching modes, **your phone/laptop will aut
 
 ## Hardware
 
-**Board:** Seeed Studio XIAO ESP32-S3
+**Boards:** Seeed Studio XIAO ESP32-S3 (original) and XIAO ESP32-C6.
 
-| Pin | Function |
-|-----|----------|
-| GPIO 3 | Piezo buzzer |
-| GPIO 21 | NeoPixel LED |
-| GPIO 0 | BOOT button (hold 1.5s to return to mode selector) |
+| Function | XIAO ESP32-S3 | XIAO ESP32-C6 |
+|----------|---------------|---------------|
+| Piezo buzzer | GPIO 3 | GPIO 2 (D2) |
+| Status LED | GPIO 21 (on-board) | GPIO 15 (on-board, active-low) |
+| BOOT button (hold 1.5s → selector) | GPIO 0 | GPIO 9 (on-board) |
+| Detector NeoPixel | GPIO 4 | GPIO 1 (D1) |
+
+On the C6 the buzzer and Detector NeoPixel go to broken-out header pads (D2/D1);
+the LED and BOOT button are on-board. Full C6 wiring, the no-PSRAM behaviour,
+and toolchain setup are in **[PORTING_ESP32C6.md](PORTING_ESP32C6.md)**.
 
 ---
 
@@ -202,6 +205,12 @@ On power-up, the device starts a WiFi access point (`oui-spy` / `ouispy123` by d
 ## Flashing
 
 Everything you need to flash a board is included in the repo. No PlatformIO or build tools required -- just Python and a USB cable.
+
+> **Two targets.** The steps below flash the **XIAO ESP32-S3** from `firmware/`.
+> For the **XIAO ESP32-C6**, add `--c6` to any `flash.py` command — it flashes
+> the verified binaries in `firmware-c6/` (chip `esp32c6`, 4 MB). Or skip
+> `flash.py` and build + flash straight from PlatformIO — see
+> [Building from Source](#building-from-source).
 
 ### What You Need
 
@@ -230,7 +239,7 @@ pip install esptool pyserial
 
 ### Step 2: Flash a Single Board
 
-1. Plug in your XIAO ESP32-S3 via USB-C
+1. Plug in your XIAO ESP32-S3 via USB-C (for a C6, use `python3 flash.py --c6`)
 2. Run:
 
 ```bash
@@ -282,21 +291,23 @@ python3 flash.py --batch --erase
 
 ### What Gets Flashed
 
-The flasher writes all four binary files from the `firmware/` folder in one shot:
+The flasher writes all four binary files in one shot — from `firmware/` for the
+S3, or `firmware-c6/` with `--c6` for the C6 (same offsets):
 
 | File | Offset | Purpose |
 |------|--------|---------|
-| `bootloader.bin` | `0x0000` | ESP32-S3 bootloader |
+| `bootloader.bin` | `0x0000` | bootloader (chip-specific) |
 | `partitions.bin` | `0x8000` | Partition table |
 | `boot_app0.bin` | `0xe000` | OTA data partition |
 | `oui-spy-unified-blue.bin` | `0x10000` | Application firmware |
 
-All four files must be present in the `firmware/` folder. The script will warn you if any are missing.
+All four files must be present in the target folder. The script will warn you if any are missing.
 
 ### All Options
 
 ```bash
-python3 flash.py                        # flash one board (interactive)
+python3 flash.py                        # flash one board (interactive, S3)
+python3 flash.py --c6                    # flash a XIAO ESP32-C6 (from firmware-c6/)
 python3 flash.py --erase                # full erase before flashing
 python3 flash.py --batch                # batch mode: hands-free, auto-detect
 python3 flash.py --batch --erase        # batch + erase (production runs)
@@ -358,7 +369,8 @@ cp .pio/build/seeed_xiao_esp32s3/firmware.bin firmware/oui-spy-unified-blue.bin
 - `ArduinoJson` -- JSON serialization
 - `Adafruit NeoPixel` -- LED control
 
-**Flash layout:** Custom partition table with ~6MB app + ~2MB LittleFS data. See `partitions.csv`.
+**Flash layout:** S3 — ~6 MB app + ~2 MB filesystem (`partitions.csv`, 8 MB flash).
+C6 — ~2.8 MB app + ~1 MB SPIFFS (`partitions_4mb.csv`, 4 MB flash).
 
 ---
 
@@ -374,7 +386,7 @@ Each firmware is available as a standalone project:
 
 | Firmware | Description | Board |
 |----------|-------------|-------|
-| **[OUI-SPY Unified](https://github.com/colonelpanichacks/oui-spy-unified-blue)** | Multi-mode BLE + WiFi detector (this project) | ESP32-S3 / ESP32-C5 |
+| **[OUI-SPY Unified](https://github.com/colonelpanichacks/oui-spy-unified-blue)** | Multi-mode BLE + WiFi detector — **upstream of this fork** | ESP32-S3 / ESP32-C5 |
 | **[OUI-SPY Detector](https://github.com/colonelpanichacks/ouispy-detector)** | Targeted BLE scanner with OUI filtering | ESP32-S3 |
 | **[OUI-SPY Foxhunter](https://github.com/colonelpanichacks/ouispy-foxhunter)** | RSSI-based proximity tracker | ESP32-S3 |
 | **[Flock You](https://github.com/colonelpanichacks/flock-you)** | Flock Safety / Raven surveillance detection | ESP32-S3 |
@@ -384,9 +396,10 @@ Each firmware is available as a standalone project:
 
 ---
 
-## Author
+## Credits
 
-**colonelpanichacks**
+- **Original firmware and the six modes:** **[colonelpanichacks](https://github.com/colonelpanichacks)** — the XIAO ESP32-S3 [OUI-SPY Unified Blue](https://github.com/colonelpanichacks/oui-spy-unified-blue) project this repository is forked from.
+- **ESP32-C6 port:** this fork, [Aediliss](https://github.com/Aediliss/oui-spy-unified-c6) — adds the XIAO ESP32-C6 build target while keeping the S3 build intact.
 
 ---
 
