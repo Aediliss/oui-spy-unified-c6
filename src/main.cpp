@@ -17,6 +17,8 @@
 #include <Preferences.h>
 #include "modes.h"
 #include "oled_status.h"      // Heltec on-board OLED status display
+#include "soc/gpio_sig_map.h" // SIG_GPIO_OUT_IDX for the LED polarity fix
+#include "esp_rom_gpio.h"     // esp_rom_gpio_connect_out_signal (takes uint32 signal)
 
 // Hardware pins. #ifndef-guarded so the build overrides them via -D flags in
 // platformio.ini (the Heltec V4 pin map); the fallback defaults below stand
@@ -33,6 +35,17 @@
 #define BOOT_BUTTON_PIN 0
 #endif
 #define BOOT_HOLD_TIME 1500  // ms - hold boot button this long to force selector
+
+// Invert the LED pad's output at the GPIO matrix. The firmware's LED logic is
+// active-LOW (LOW = on), but the Heltec's on-board LED (GPIO35) is active-HIGH;
+// routing GPIO.out through the matrix inverted makes the existing writes light
+// the LED correctly. digitalWrite() still targets GPIO.out, so nothing else
+// changes. Call once, after all LED pinMode()s have run.
+static inline void applyLedPolarityFix() {
+    // NB: use the ROM helper, not pinMatrixOutAttach() — its signal arg is
+    // uint8_t and SIG_GPIO_OUT_IDX (256) would truncate to 0.
+    esp_rom_gpio_connect_out_signal(LED_PIN, SIG_GPIO_OUT_IDX, true /*invert*/, false);
+}
 
 static Preferences prefs;
 static AsyncWebServer selectorServer(80);
@@ -575,6 +588,12 @@ void setup() {
     
     Serial.println("[OUI-SPY] ========== MODE STARTED ==========\n");
     Serial.flush();
+
+    // Heltec on-board LED (GPIO35) is active-HIGH, but the firmware drives the
+    // status LED active-LOW. Every mode's setup() has now run its LED
+    // pinMode(), so invert the pad at the GPIO matrix once here — the existing
+    // active-low digitalWrite()s then light the LED with the correct sense.
+    applyLedPolarityFix();
 
     // Mode is up (AP started if it has one) — draw the status screen.
     oled_show(currentMode);
