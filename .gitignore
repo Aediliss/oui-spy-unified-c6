@@ -1,0 +1,11 @@
+.pio/
+.vscode/
+.DS_Store
+*.o
+*.d
+# firmware/*.bin
+__pycache__/
+.venv/
+
+# local reference clone of the S3 upstream — not part of the port
+upstream/
