@@ -304,7 +304,7 @@ class Cb : public NimBLEAdvertisedDeviceCallbacks {
 
         // NimBLE stores m_address[5]=MSB, m_address[0]=LSB (matches its toString()).
         // Frame.addr keeps the same convention; nordic_pcap writes bytes on-wire LSB-first.
-        const uint8_t* nat = OUISPY_BLE_ADDR_BYTES(a);
+        const uint8_t* nat = a.getNative();
         uint8_t addr[6];
         memcpy(addr, nat, 6);
 
@@ -332,10 +332,10 @@ class Cb : public NimBLEAdvertisedDeviceCallbacks {
         f.addr_type   = addr_type;
         memcpy(f.addr, addr, 6);
 
-        size_t plen = OUISPY_BLE_PAYLOAD_LEN(dev);
+        size_t plen = dev->getPayloadLength();
         if (plen > MAX_PAYLOAD) plen = MAX_PAYLOAD;
         f.payload_len = (uint16_t)plen;
-        if (plen > 0) memcpy(f.payload, OUISPY_BLE_PAYLOAD(dev), plen);
+        if (plen > 0) memcpy(f.payload, dev->getPayload(), plen);
 
         ring_push(ring_pcap, f);
         ring_push(ring_dash, f);
@@ -355,7 +355,7 @@ void start_scan() {
     s->setWindow(config::get().scan_window_ms);
     s->setDuplicateFilter(false);      // capture every advert, even repeats
     s->setAdvertisedDeviceCallbacks(&g_cb, /*wantDuplicates=*/true);
-    OUISPY_BLE_START(s, 0, false);
+    s->start(0, nullptr, false);
 }
 
 bool init() {

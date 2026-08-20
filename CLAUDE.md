@@ -1,74 +1,80 @@
-# OUI Spy Unified Blue – Multi-Mode BLE/WiFi Surveillance Detection Firmware
+# OUI Spy Unified Blue – Heltec WiFi LoRa 32 V4
 
-Six-mode unified firmware for Seeed Studio XIAO ESP32-S3, XIAO ESP32-C6, and Heltec WiFi LoRa 32 V4, with boot selector menu. Detects surveillance hardware, drones, and BLE tracking devices.
+Six-mode BLE/WiFi surveillance-detection firmware for the **Heltec WiFi LoRa 32
+V4** (ESP32-S3), with a boot-selector menu and an on-board OLED status display.
+Detects surveillance hardware, drones, and BLE tracking devices. Fork of
+colonelpanichacks's XIAO ESP32-S3 project, ported to the Heltec V4.
 
 ## Hardware
 
-Three targets. The C6 port lives in `src/compat_esp32c6.h` (active only when
-`CONFIG_IDF_TARGET_ESP32C6`) + `src/nimble_compat_c6.h` + `#ifndef`-guarded pin
-defines. The Heltec V4 is another ESP32-S3, so it reuses the S3 code path with
-no shims — just a new env + pins injected via `-D` flags. The XIAO-S3 build is
-unchanged. See `PORTING_ESP32C6.md` and the `platformio.ini` env comments.
+Single target: Heltec WiFi LoRa 32 V4 — ESP32-S3 @ 240 MHz, **2 MB quad PSRAM**
+(`qio_qspi`), 16 MB flash, native USB (USB-Serial-JTAG), on-board SSD1306 OLED
+and SX1262 LoRa (LoRa unused). Pins are injected via `-D` flags in
+`platformio.ini` over `#ifndef`-guarded defaults in the mode sources.
 
-| Signal | XIAO ESP32-S3 | XIAO ESP32-C6 | Heltec WiFi LoRa 32 V4 |
-|---|---|---|---|
-| Buzzer (PWM) | GPIO 3 | GPIO 2 (D2) | GPIO 7 (external only) |
-| LED (inverted logic) | GPIO 21 (HIGH=OFF) | GPIO 15 (onboard) | GPIO 35 (onboard, active-**high** → reads inverted) |
-| Boot button (hold 1.5–2s) | GPIO 0 | GPIO 9 (onboard) | GPIO 0 (PRG) |
-| NeoPixel (Detector) | GPIO 4 | GPIO 1 (D1) | GPIO 4 (external only) |
-| Flock-You Serial1 mirror | GPIO 43 | GPIO 20 (D9) | GPIO 43 |
+| Signal | GPIO | Notes |
+|---|---|---|
+| On-board LED | 35 | active-**high** → reads inverted (lit at idle) |
+| Boot/PRG button | 0 | hold 1.5–2 s → selector |
+| OLED (I2C) | SDA 17 / SCL 18 / RST 21 | powered via Vext (GPIO 36) |
+| Buzzer (PWM) | 7 | **external only** — no on-board buzzer |
+| NeoPixel (Detector) | 4 | **external only** — no on-board NeoPixel |
+| Flock-You Serial1 mirror | 43 | U0TXD pad |
 
-- C6: single-core RISC-V @ 160 MHz, **no PSRAM**, 4 MB flash, USB-Serial-JTAG.
-  Arduino core 3.x required (pioarduino platform).
-- Heltec V4: ESP32-S3 @ 240 MHz, **2 MB quad PSRAM** (`qio_qspi`), 16 MB flash,
-  native USB. Core 2.x (espressif32), same as the XIAO S3. GPIO21 is the OLED
-  reset here (not an LED); no onboard buzzer/NeoPixel. All modes tested on-device.
-- Build/flash test hook: `-DOUISPY_FORCE_MODE=<n>` boots straight into mode n
-  (bypassing the web selector) and prints PSRAM/heap — inert in normal builds.
+- No on-board buzzer/NeoPixel → audible/RGB alerts silent unless external parts
+  are wired; the OLED is the local feedback. GPIO 21 is the OLED reset, not an
+  LED (hence the LED on 35).
+- Test hook: `-DOUISPY_FORCE_MODE=<n>` boots straight into mode n (bypassing the
+  web selector) and prints PSRAM/heap — inert in normal builds.
 
 ## Modes
 
 | Mode | File | Purpose |
 |------|------|---------|
 | Boot Selector | `src/main.cpp` | Mode selection menu via serial/web |
-| Detector | `src/raw/detector.cpp` | OUI-based WiFi surveillance detection |
+| Detector | `src/raw/detector.cpp` | OUI-based BLE surveillance detection |
 | Foxhunter | `src/raw/foxhunter.cpp` | RSSI proximity tracker for specific BLE targets |
-| Flock-You | `src/raw/flockyou.cpp` | Surveillance detection with GPS logging |
+| Flock-You | `src/raw/flockyou_promiscious.cpp` | Promiscuous WiFi Flock Safety detection |
 | Sky Spy | `src/raw/skyspy.cpp` | Drone Remote ID detection (BLE + WiFi) |
 | BLE Sniff | `src/raw/blesniff.cpp` | Passive BLE advertising capture (Wireshark-ready) |
+
+## On-board OLED
+
+`src/oled_status.{h,cpp}` drives a 128×64 SSD1306 status screen (mode, uptime,
+connection, and a live per-mode stat). Driven from `main.cpp` (`oled_begin` in
+setup, `oled_tick` ~1 Hz in loop). Each mode exposes a small stat getter
+declared in `src/modes.h` and defined in its `src/mode_*.cpp` wrapper (reading
+the mode's anonymous-namespace counter): `detector_stat` (devices),
+`foxhunter_stat` (target RSSI, +bar), `flockyou_stat`, `pcap_stat`,
+`skyspy_stat` (drones), `blesniff_stat`.
 
 ## Build & Run
 
 ```bash
-# C6 (default env)
-pio run -e seeed_xiao_esp32c6
-pio run -e seeed_xiao_esp32c6 -t upload
-# S3
-pio run -e seeed_xiao_esp32s3
-pio run -e seeed_xiao_esp32s3 -t upload
-# Heltec WiFi LoRa 32 V4
-pio run -e heltec_wifi_lora_32_v4
-pio run -e heltec_wifi_lora_32_v4 -t upload
-pio device monitor -b 115200
+pio run                       # build (single default env)
+pio run -t upload             # build + flash over USB
+pio device monitor -b 115200  # serial
 ```
 
 ## PlatformIO Config
 
-- **Board**: `seeed_xiao_esp32s3`
-- **Partition**: Custom (`partitions.csv`) — 6MB app, 2MB LittleFS
-- **BLE**: NimBLE-Arduino 1.4.0+
-- **Web**: AsyncWebServer 3.0.6+
-- **Filesystem**: LittleFS (web assets, config)
+- **Platform/board**: `espressif32@^6.3.0` (Arduino core 2.x), board `heltec_wifi_lora_32_V3` (V4 is pin-compatible)
+- **Partition**: `partitions_16mb.csv` — 6 MB app, 2 MB SPIFFS (SPIFFS kept small; unreliable on large partitions)
+- **PSRAM**: `board_build.arduino.memory_type = qio_qspi` (2 MB quad — not octal)
+- **BLE**: NimBLE-Arduino 1.4.x · **Web**: mathieucarbou AsyncWebServer 3.0.6 + AsyncTCP 3.1.4 · **OLED**: Adafruit SSD1306
 
 ## Build Flags
 
 ```
 -DCORE_DEBUG_LEVEL=0
 -DARDUINO_USB_CDC_ON_BOOT=1
+-DARDUINO_USB_MODE=1
 -DBOARD_HAS_PSRAM
--mfix-esp32-psram-cache-issue
 -DCONFIG_BT_NIMBLE_ENABLED=1
 -Isrc/raw
+-DLED_PIN=35 -DPCAP_LED_PIN=35 -DBLESNIFF_LED_PIN=35
+-DBUZZER_PIN=7 -DPCAP_BUZZER_PIN=7 -DBLESNIFF_BUZZER_PIN=7
+-DNEOPIXEL_PIN=4
 ```
 
 ## NVS Namespaces
@@ -83,28 +89,22 @@ pio device monitor -b 115200
 
 Don't reuse these in mode code.
 
-## Web Interface
-
-- **AP IP**: 192.168.4.1 (all modes)
-- Served from LittleFS partition
-- Mode-specific endpoints for config and data export
-
 ## Architecture
 
-- Anonymous namespaces for symbol isolation between modes
-- Each mode is a self-contained `.cpp` file in `src/raw/`
-- Boot selector in `main.cpp` routes to selected mode
-- ~9700 lines total across 4 firmware implementations
+- Each mode is a self-contained `.cpp` in `src/raw/`, wrapped by a `src/mode_*.cpp`
+  that `#include`s it inside an **anonymous namespace** for symbol isolation.
+- `src/main.cpp` boot-selector routes to the selected mode; mode chosen via the
+  web selector (AP `oui-spy` @ 192.168.4.1) and saved to NVS.
+- Web dashboards are embedded in firmware (PROGMEM), served per-mode.
 
 ## Gotchas
 
-1. **LED inverted**: `digitalWrite(21, HIGH)` = OFF, `LOW` = ON
-2. **Boot sound**: Zelda "Secret Discovered" jingle on startup
-3. **Buzzer frequencies**: 1000 Hz (low alert), 2000 Hz (general), 3000 Hz (high alert) — avoid <20 Hz
-4. **Flock-You memory**: Max 200 unique detections, oldest overwritten after that — export regularly
-5. **Sky Spy dual capture**: Both BLE (UUID 0xFAFF) and WiFi action frames — channel swap window may miss some
-6. **GPIO conflicts**: Don't reassign GPIO 0, 3, 21, 43, 44
-7. **AsyncWebServer + NVS**: NVS writes are synchronous — can cause brief freezes in HTTP handlers
-8. **PSRAM cache fix**: `-mfix-esp32-psram-cache-issue` build flag is critical
-9. **Mode persistence**: Selected mode saved to NVS, survives reboot
-10. **Flash utility**: `flash.py` for automated flashing
+1. **LED**: GPIO 35, active-**high** on the Heltec — the code drives it active-low, so it reads inverted (lit at idle). Cosmetic.
+2. **GPIO 21 is the OLED reset**, not an LED. OLED I2C on 17/18; USB on 19/20; Vext on 36. Don't reassign 0/17/18/19/20/21/35/36.
+3. **No on-board buzzer/NeoPixel** — buzzer (7) / NeoPixel (4) need external parts; a benign `ledc: LEDC is not initialized` may print at boot from the tone() path.
+4. **PSRAM**: `qio_qspi` (2 MB quad). Octal (`qio_opi`) would clash with GPIO 33–37 (the LED).
+5. **SPIFFS**: keep the partition ≤ 2 MB; large SPIFFS mounts unreliably. First-boot `-10025` is the expected format-then-mount.
+6. **Flock-You memory**: max 200 unique detections, oldest overwritten — export regularly.
+7. **AsyncWebServer + NVS**: NVS writes are synchronous — brief freezes possible in HTTP handlers.
+8. **Mode persistence**: selected mode saved to NVS, survives reboot.
+9. **Flash utility**: `flash.py` (defaults to esp32s3 / 16 MB / `firmware-heltec/`).

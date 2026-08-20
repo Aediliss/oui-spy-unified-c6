@@ -85,8 +85,8 @@ id_data* next_uav(uint8_t* mac) {
 class MyAdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
 public:
   void onResult(NimBLEAdvertisedDevice* device) override {
-    int len = (int) OUISPY_BLE_PAYLOAD_LEN(device);
-    uint8_t* payload = (uint8_t*) OUISPY_BLE_PAYLOAD(device);
+    int len = device->getPayloadLength();
+    uint8_t* payload = device->getPayload();
     if (!payload || len < 6 + (int)sizeof(ODID_BasicID_encoded)) return;
 
     if (payload[1] != 0x16 || payload[2] != 0xFA ||
@@ -106,7 +106,7 @@ public:
                   UAS_data.SystemValid     || UAS_data.OperatorIDValid;
     if (!useful) return;
 
-    uint8_t* mac = (uint8_t*) OUISPY_BLE_ADDR_BYTES(device->getAddress());
+    uint8_t* mac = (uint8_t*) device->getAddress().getNative();
     if (!mac) return;
 
     id_data* UAV = next_uav(mac);
@@ -212,7 +212,7 @@ void send_json_fast(const id_data *UAV) {
 
 void bleScanTask(void *parameter) {
   for (;;) {
-    OUISPY_BLE_START(pBLEScan, 1, false);
+    pBLEScan->start(1, nullptr, false);
     pBLEScan->clearResults();
     // No flag checking needed - BLE callback handles buzzer triggering
     delay(100);

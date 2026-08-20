@@ -31,4 +31,14 @@ void blesniff_setup();
 void blesniff_loop();
 void blesniff_stop();
 
+// Per-mode headline stat for the on-board OLED (display-only; read at ~1 Hz).
+// Each is defined in its mode wrapper, reading the mode's live counter.
+#include <stdint.h>
+int      detector_stat();    // matched/seen device count
+int      foxhunter_stat();   // target RSSI dBm; >0 means no target set
+uint32_t flockyou_stat();    // Flock detection count
+uint32_t pcap_stat();        // captured WiFi packet count
+int      skyspy_stat();      // active drone (UAV) count
+uint32_t blesniff_stat();    // captured BLE advertisement count
+
 #endif // MODES_H

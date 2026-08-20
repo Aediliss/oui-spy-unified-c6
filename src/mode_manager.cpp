@@ -11,7 +11,6 @@
 
 #include "mode_iface.h"
 #include "modes.h"
-#include "nimble_compat_c6.h"  // C6: NimBLE 2.x bridge (getInitialized->isInitialized; no-op on S3)
 
 namespace {
 

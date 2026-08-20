@@ -2825,7 +2825,7 @@ void startScanningMode() {
     
     // NOW start BLE scanning - after ready signal is complete
     if (pBLEScan != nullptr) {
-        OUISPY_BLE_START(pBLEScan, 3, false);
+        pBLEScan->start(3, nullptr, false);
         
         if (isSerialConnected()) {
             Serial.println("BLE scanning started!");
@@ -3102,7 +3102,7 @@ void loop() {
         if (currentMillis - lastScanTime >= 3000) {
             pBLEScan->stop();
             delay(10);
-            OUISPY_BLE_START(pBLEScan, 2, false);
+            pBLEScan->start(2, nullptr, false);
             lastScanTime = currentMillis;
         }
 

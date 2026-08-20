@@ -27,7 +27,6 @@
 #include <string.h>
 #include <SPIFFS.h>
 #include "modes.h"
-#include "compat_esp32c6.h"   // C6: buzzer/pin/single-core shim (no-op on S3)
 
 // Rename setup/loop so they don't collide with the unified main.cpp's
 // Arduino entry points (and the other modes' wrapped setup/loop).
@@ -43,3 +42,6 @@ namespace {
 
 void flockyou_promiscious_setup() { flockyou_promiscious_ns_setup(); }
 void flockyou_promiscious_loop()  { flockyou_promiscious_ns_loop(); }
+
+// OLED headline stat: number of Flock detections this session.
+uint32_t flockyou_stat() { return (uint32_t)fyDetCount; }

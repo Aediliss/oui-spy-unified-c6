@@ -30,7 +30,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "modes.h"
-#include "compat_esp32c6.h"   // C6: buzzer/pin/single-core shim (no-op on S3)
 
 // Rename setup/loop so they don't collide with the Arduino entry points in
 // main.cpp or the other modes' wrapped setup/loop.
@@ -52,3 +51,6 @@ void pcap_stop() {
     // radio; the async web server + writer tasks unwind cleanly on restart.
     esp_wifi_set_promiscuous(false);
 }
+
+// OLED headline stat: total WiFi packets captured (reuses the mode's counter).
+uint32_t pcap_stat() { return capture::total_packets(); }

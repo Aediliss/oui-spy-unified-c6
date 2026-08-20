@@ -937,7 +937,7 @@ void startTrackingMode() {
     pBLEScan->setDuplicateFilter(false);
     
     // Start continuous scanning
-    OUISPY_BLE_START(pBLEScan, 0, false);
+    pBLEScan->start(0, nullptr, false);
     
     Serial.println("FOXHUNT REALTIME tracking started!");
     

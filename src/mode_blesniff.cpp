@@ -32,8 +32,6 @@
 #include <string.h>
 #include <stdio.h>
 #include "modes.h"
-#include "compat_esp32c6.h"   // C6: buzzer/pin/single-core shim (no-op on S3)
-#include "nimble_compat_c6.h"  // C6: NimBLE 2.x scan-API bridge (no-op on S3)
 
 // Rename setup/loop so they don't collide with the Arduino entry points in
 // main.cpp or the other modes' wrapped setup/loop.
@@ -58,3 +56,6 @@ void blesniff_stop() {
         if (s) s->stop();
     }
 }
+
+// OLED headline stat: total BLE advertisements captured (reuses the counter).
+uint32_t blesniff_stat() { return scan::total_adverts(); }

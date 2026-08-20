@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-OUI Spy Unified Blue -- Firmware Flasher (XIAO ESP32-S3)
+OUI Spy Unified Blue -- Firmware Flasher (Heltec WiFi LoRa 32 V4)
 
-Drop your .bin in the firmware/ folder (or pass a path), plug in your
-XIAO ESP32-S3, and run:
+Drop your .bin in the firmware-heltec/ folder (or pass a path), plug in your
+Heltec WiFi LoRa 32 V4, and run:
 
     python flash.py
 
@@ -34,9 +34,9 @@ if sys.platform == "win32":
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # -- Config ----------------------------------------------------------------
-# XIAO ESP32-S3: Xtensa dual-core, WiFi + BLE 5, PSRAM
-# Flash layout matches PlatformIO exactly (pio run -e seeed_xiao_esp32s3 -t upload -v)
-BOOT_OFFSET   = "0x0000"       # ESP32-S3 bootloader starts at 0x0 (C5 uses 0x2000)
+# Heltec WiFi LoRa 32 V4: ESP32-S3, 16 MB flash, 2 MB PSRAM, native USB.
+# Flash layout matches PlatformIO exactly (pio run -e heltec_wifi_lora_32_v4 -t upload -v)
+BOOT_OFFSET   = "0x0000"       # ESP32-S3 bootloader starts at 0x0
 PART_OFFSET   = "0x8000"
 OTA_OFFSET    = "0xe000"
 APP_OFFSET    = "0x10000"
@@ -44,8 +44,8 @@ BAUD          = "921600"
 CHIP          = "esp32s3"
 FLASH_MODE    = "dio"
 FLASH_FREQ    = "80m"
-FLASH_SIZE    = "8MB"
-FIRMWARE_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "firmware")
+FLASH_SIZE    = "16MB"
+FIRMWARE_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "firmware-heltec")
 
 # Known USB VID:PID pairs for ESP32-S3 / common UART bridges
 ESP_VIDS = {
@@ -159,7 +159,7 @@ def find_firmware(path_arg=None):
         print(f"\n  File not found: {path_arg}")
         sys.exit(1)
 
-    # Look in firmware/ folder (exclude support bins -- flash_one handles those)
+    # Look in firmware-heltec/ folder (exclude support bins -- flash_one handles those)
     SUPPORT_BINS = {"bootloader.bin", "partitions.bin", "boot_app0.bin"}
     if os.path.isdir(FIRMWARE_DIR):
         bins = sorted(
@@ -367,44 +367,21 @@ def main():
     args = sys.argv[1:]
     do_erase = "--erase" in args
     do_batch = "--batch" in args
-    do_c6 = "--c6" in args
-    do_heltec = "--heltec" in args
     bin_path = None
-    global CHIP, FIRMWARE_DIR, FLASH_SIZE
-
-    # --c6: flash a Seeed XIAO ESP32-C6 build instead of the default S3.
-    # Same flash offsets, but a different chip id, 4 MB size, and bins from
-    # firmware-c6/. Build them first with: pio run -e seeed_xiao_esp32c6
-    if do_c6:
-        CHIP = "esp32c6"
-        FLASH_SIZE = "4MB"
-        FIRMWARE_DIR = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "firmware-c6")
-
-    # --heltec: flash a Heltec WiFi LoRa 32 V4 build. Same chip family as the
-    # XIAO S3 (esp32s3) and same offsets, but 16 MB flash and bins from
-    # firmware-heltec/. Build them first with: pio run -e heltec_wifi_lora_32_v4
-    if do_heltec:
-        CHIP = "esp32s3"
-        FLASH_SIZE = "16MB"
-        FIRMWARE_DIR = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "firmware-heltec")
 
     for a in args:
-        if a in ("--erase", "--batch", "--c6", "--heltec"):
+        if a in ("--erase", "--batch"):
             continue
         if a in ("-h", "--help"):
             print("""
-  Usage:  python flash.py [firmware.bin] [--erase] [--batch] [--c6|--heltec]
+  Usage:  python flash.py [firmware.bin] [--erase] [--batch]
+
+  Flashes a Heltec WiFi LoRa 32 V4 (chip esp32s3, 16 MB) from firmware-heltec/.
 
   Options:
-    firmware.bin   Path to .bin file (auto-detects from firmware/ folder)
+    firmware.bin   Path to .bin file (auto-detects from firmware-heltec/ folder)
     --erase        Erase entire flash before writing
     --batch        Batch mode: flash multiple boards one after another
-    --c6           Flash a XIAO ESP32-C6 build (chip esp32c6, 4MB,
-                   bins from firmware-c6/). Default is XIAO ESP32-S3.
-    --heltec       Flash a Heltec WiFi LoRa 32 V4 build (chip esp32s3, 16MB,
-                   bins from firmware-heltec/). Default is XIAO ESP32-S3.
 
   Single board (default):
     python flash.py

@@ -16,8 +16,6 @@
 #include <NimBLEAdvertisedDevice.h>
 #include <esp_wifi.h>
 #include "modes.h"
-#include "compat_esp32c6.h"   // C6: buzzer/pin/single-core shim (no-op on S3)
-#include "nimble_compat_c6.h"  // C6: NimBLE 2.x scan-API bridge (no-op on S3)
 
 // Rename setup/loop
 #define setup foxhunter_ns_setup
@@ -32,3 +30,7 @@ namespace {
 
 void foxhunter_setup() { foxhunter_ns_setup(); }
 void foxhunter_loop()  { foxhunter_ns_loop(); }
+
+// OLED headline stat: target RSSI (dBm) when a target MAC is set, else 1
+// (sentinel meaning "no target") so the OLED can show a searching state.
+int foxhunter_stat() { return targetMAC.length() > 0 ? currentRSSI : 1; }

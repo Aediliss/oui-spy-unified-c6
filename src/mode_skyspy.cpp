@@ -20,8 +20,6 @@
 #include <freertos/task.h>
 #include <Preferences.h>
 #include "modes.h"
-#include "compat_esp32c6.h"   // C6: buzzer/pin/single-core shim (no-op on S3)
-#include "nimble_compat_c6.h"  // C6: NimBLE 2.x scan-API bridge (no-op on S3)
 
 // Rename setup/loop
 #define setup skyspy_ns_setup
@@ -36,3 +34,6 @@ namespace {
 
 void skyspy_setup() { skyspy_ns_setup(); }
 void skyspy_loop()  { skyspy_ns_loop(); }
+
+// OLED headline stat: number of occupied UAV slots (drones seen this session).
+int skyspy_stat() { int n = 0; for (int i = 0; i < MAX_UAVS; i++) if (uavs[i].mac[0]) n++; return n; }

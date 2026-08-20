@@ -1,26 +1,20 @@
 # OUI SPY
 
-Multi-mode surveillance detection and BLE intelligence firmware for the **Seeed Studio XIAO ESP32-S3** — and now the **Seeed Studio XIAO ESP32-C6** and the **Heltec WiFi LoRa 32 V4**.
+Multi-mode surveillance detection and BLE intelligence firmware for the **Heltec WiFi LoRa 32 V4** (ESP32-S3 · 16 MB flash · 2 MB PSRAM · on-board OLED).
 
-One device. Six firmware modes. Select from a boot menu, reboot, and go.
-
-> **Three build targets** (`pio run -e <env> -t upload`):
-> - `seeed_xiao_esp32s3` — the original XIAO ESP32-S3.
-> - `seeed_xiao_esp32c6` — XIAO ESP32-C6 (single-core, no PSRAM, 4 MB flash;
->   the PCAP/BLE-Sniff session buffer is smaller). See
->   **[PORTING_ESP32C6.md](PORTING_ESP32C6.md)**.
-> - `heltec_wifi_lora_32_v4` — Heltec WiFi LoRa 32 V4 (also an ESP32-S3, 16 MB
->   flash, 2 MB PSRAM). No on-board buzzer, so the audible alerts are silent
->   unless you wire an external piezo; the on-board LED reads inverted. All six
->   modes are verified running on the hardware.
+One device. Six firmware modes. Select from a boot menu, reboot, and go — with a live status + stats screen on the on-board OLED.
 
 > **This is a fork.** The original six-mode firmware is by
 > **[colonelpanichacks](https://github.com/colonelpanichacks/oui-spy-unified-blue)**
-> and targets the XIAO ESP32-S3. This repository adds the **XIAO ESP32-C6**
-> target and keeps the S3 build working. Flash it with the tools included here
-> (`flash.py` or PlatformIO) — see **[Flashing](#flashing)**. (There is no
-> hosted web flasher for this fork; the upstream project's web flasher only
-> serves the original author's S3 builds.)
+> and targets the Seeed XIAO ESP32-S3. This repository ports it to the **Heltec
+> WiFi LoRa 32 V4** — also an ESP32-S3 — adding an on-board OLED display and the
+> Heltec pin map. Flash it with the tools included here (`flash.py` or
+> PlatformIO) — see **[Flashing](#flashing)**.
+>
+> The Heltec V4 has **no on-board buzzer**, so the audible alerts are silent
+> unless you wire an external piezo (GPIO7); the OLED and the serial/web
+> dashboards are the primary feedback. All six modes are verified running on the
+> hardware.
 
 ---
 
@@ -156,6 +150,24 @@ Passive BLE advertising capture. Listens on the three BLE advertising channels (
 
 ---
 
+## On-board OLED
+
+The Heltec's 128×64 OLED shows a live status screen so you can read the device's
+state at a glance — no web UI or serial needed, which matters since there's no
+buzzer. It refreshes about once a second:
+
+- **Mode + uptime** — which firmware is running (SELECTOR / DETECTOR / PCAP / …).
+- **A live stat for the active mode:**
+  - **Detector** — devices seen
+  - **Foxhunter** — target **RSSI + a proximity bar** (the visual stand-in for the buzzer's Geiger-counter feedback)
+  - **Flock-You** — Flock detection count
+  - **PCAP** — packets captured
+  - **Sky Spy** — drones detected
+  - **BLE Sniff** — advertisements captured
+- **Connection** — the mode's live AP SSID and `192.168.4.1`, or `USB-CDC` for the no-AP modes (Flock-You, Sky Spy).
+
+---
+
 ## WiFi Access Points
 
 Each mode creates its own AP. When switching modes, **your phone/laptop will auto-reconnect to the last saved network**, which may be the wrong mode's AP. To avoid confusion:
@@ -179,24 +191,22 @@ Each mode creates its own AP. When switching modes, **your phone/laptop will aut
 
 ## Hardware
 
-**Boards:** Seeed Studio XIAO ESP32-S3 (original), XIAO ESP32-C6, and Heltec WiFi LoRa 32 V4.
+**Board:** Heltec WiFi LoRa 32 V4 — ESP32-S3, 16 MB flash, 2 MB PSRAM, native USB,
+on-board SSD1306 OLED and SX1262 LoRa (LoRa is unused by this firmware).
 
-| Function | XIAO ESP32-S3 | XIAO ESP32-C6 | Heltec WiFi LoRa 32 V4 |
-|----------|---------------|---------------|------------------------|
-| Piezo buzzer | GPIO 3 | GPIO 2 (D2) | GPIO 7 (external only) |
-| Status LED | GPIO 21 (on-board) | GPIO 15 (on-board, active-low) | GPIO 35 (on-board, active-high) |
-| BOOT button (hold 1.5s → selector) | GPIO 0 | GPIO 9 (on-board) | GPIO 0 (PRG, on-board) |
-| Detector NeoPixel | GPIO 4 | GPIO 1 (D1) | GPIO 4 (external only) |
+| Function | GPIO | Notes |
+|----------|------|-------|
+| On-board LED | 35 | active-high, so it reads inverted (lit at idle) |
+| BOOT / PRG button | 0 | hold 1.5 s to return to the selector |
+| OLED (I2C) | SDA 17 · SCL 18 · RST 21 | powered via Vext (GPIO 36) |
+| Piezo buzzer | 7 | **external only** — no on-board buzzer |
+| Detector NeoPixel | 4 | **external only** — no on-board NeoPixel |
 
-On the C6 the buzzer and NeoPixel go to broken-out pads (D2/D1). The **Heltec V4
-has no on-board buzzer or NeoPixel** — those pins (GPIO7/GPIO4) are free header
-pads for optional external parts, so the audible/RGB alerts are silent by
-default; its on-board white LED (GPIO35) is active-high and therefore reads
-inverted versus the firmware's active-low logic (lit at idle). Note GPIO21 is
-the OLED reset on the Heltec, which is why its status LED lives on GPIO35. Full
-C6 details are in **[PORTING_ESP32C6.md](PORTING_ESP32C6.md)**; the Heltec pin
-map and rationale are in the `platformio.ini` `[env:heltec_wifi_lora_32_v4]`
-comment.
+There's no on-board buzzer or NeoPixel, so GPIO 7 / GPIO 4 are free header pads
+for optional external parts; without them the audible/RGB alerts are silent and
+the OLED is the local feedback. GPIO 21 is the OLED reset here (not an LED),
+which is why the status LED is on GPIO 35. The full pin map and rationale are in
+the `platformio.ini` `[env:heltec_wifi_lora_32_v4]` comment.
 
 ---
 
@@ -214,13 +224,10 @@ On power-up, the device starts a WiFi access point (`oui-spy` / `ouispy123` by d
 
 ## Flashing
 
-Everything you need to flash a board is included in the repo. No PlatformIO or build tools required -- just Python and a USB cable.
-
-> **Three targets.** The steps below flash the **XIAO ESP32-S3** from `firmware/`.
-> For the **XIAO ESP32-C6**, add `--c6` (binaries in `firmware-c6/`, chip
-> `esp32c6`, 4 MB); for the **Heltec WiFi LoRa 32 V4**, add `--heltec` (binaries
-> in `firmware-heltec/`, chip `esp32s3`, 16 MB). Or skip `flash.py` and build +
-> flash straight from PlatformIO — see [Building from Source](#building-from-source).
+Everything you need to flash the board is included in the repo — no PlatformIO or
+build tools required, just Python and a USB cable. Verified binaries live in
+`firmware-heltec/`. (Or skip `flash.py` and build + flash straight from
+PlatformIO — see [Building from Source](#building-from-source).)
 
 ### What You Need
 
@@ -249,28 +256,28 @@ pip install esptool pyserial
 
 ### Step 2: Flash a Single Board
 
-1. Plug in your XIAO ESP32-S3 via USB-C (for a C6, use `python3 flash.py --c6`)
+1. Plug in your Heltec WiFi LoRa 32 V4 via USB-C
 2. Run:
 
 ```bash
 python3 flash.py
 ```
 
-3. The script auto-detects your board and the firmware
+3. The script auto-detects the board and the firmware
 4. Type `y` and press Enter to confirm
-5. Wait for "Done!" -- the board reboots automatically and plays a boot melody
+5. Wait for "Done!" -- the board reboots automatically
 
 ### Step 3: Verify It Worked
 
 After a successful flash, the board reboots automatically. Here's how to confirm it's working:
 
-1. **Listen for 4 ascending beeps** -- this is the boot confirmation sound. If you hear it, the firmware is running.
+1. **Check the OLED** -- it shows `OUI-SPY` and `Mode: SELECTOR` with the AP info. If the screen lights up, the firmware is running.
 2. On your phone or laptop, look for the WiFi network **`oui-spy`**
 3. Connect with password **`ouispy123`**
 4. Open **http://192.168.4.1** in your browser
 5. You should see the mode selector dashboard
 
-> **No beeps?** The board may not have flashed correctly. Try flashing again with `python3 flash.py --erase` to do a full erase first.
+> **Blank screen / no AP?** The board may not have flashed correctly. Try flashing again with `python3 flash.py --erase` to do a full erase first.
 
 ### Batch Mode (Multiple Boards)
 
@@ -284,14 +291,14 @@ python3 flash.py --batch
 
 1. The script starts and waits for a board
 2. Plug in a board -- it is detected and flashed automatically
-3. Wait for the board to reboot -- **listen for 4 ascending beeps**. That's your confirmation the flash was successful and the firmware is running.
+3. Wait for the board to reboot -- **watch the OLED light up** with the selector screen. That's your confirmation the flash was successful and the firmware is running.
 4. Unplug the board and plug in the next one -- flashing starts automatically
 5. Repeat until all boards are done
 6. Press **Ctrl+C** to stop
 
 The script never times out. It will wait as long as needed for the next board. It also tracks how many boards were flashed successfully vs. failed.
 
-> **Quick test cycle:** Plug in -> auto-flash -> hear 4 beeps -> unplug -> next board. That's it.
+> **Quick test cycle:** Plug in -> auto-flash -> OLED lights up -> unplug -> next board. That's it.
 
 To erase flash completely before writing (clean slate, recommended for first-time flash):
 
@@ -301,24 +308,21 @@ python3 flash.py --batch --erase
 
 ### What Gets Flashed
 
-The flasher writes all four binary files in one shot — from `firmware/` for the
-S3, or `firmware-c6/` with `--c6` for the C6 (same offsets):
+The flasher writes all four binary files from `firmware-heltec/` in one shot:
 
 | File | Offset | Purpose |
 |------|--------|---------|
-| `bootloader.bin` | `0x0000` | bootloader (chip-specific) |
+| `bootloader.bin` | `0x0000` | ESP32-S3 bootloader |
 | `partitions.bin` | `0x8000` | Partition table |
 | `boot_app0.bin` | `0xe000` | OTA data partition |
 | `oui-spy-unified-blue.bin` | `0x10000` | Application firmware |
 
-All four files must be present in the target folder. The script will warn you if any are missing.
+All four files must be present in `firmware-heltec/`. The script will warn you if any are missing.
 
 ### All Options
 
 ```bash
-python3 flash.py                        # flash one board (interactive, S3)
-python3 flash.py --c6                    # flash a XIAO ESP32-C6 (from firmware-c6/)
-python3 flash.py --heltec                # flash a Heltec WiFi LoRa 32 V4 (from firmware-heltec/)
+python3 flash.py                        # flash one board (interactive)
 python3 flash.py --erase                # full erase before flashing
 python3 flash.py --batch                # batch mode: hands-free, auto-detect
 python3 flash.py --batch --erase        # batch + erase (production runs)
@@ -333,61 +337,48 @@ python3 flash.py --help                 # show help
 | `python: command not found` | Use `python3` instead of `python` |
 | `esptool not found` | Run `pip install esptool pyserial` (or `pip3`) |
 | No port detected | Check USB cable is a data cable (not charge-only). Install CH340/CP210x drivers. Try a different USB port. |
-| Board doesn't boot after flash | Make sure all 4 `.bin` files are in `firmware/`. Try `python3 flash.py --erase` to do a full erase first. |
+| Board doesn't boot after flash | Make sure all 4 `.bin` files are in `firmware-heltec/`. Try `python3 flash.py --erase` to do a full erase first. |
 | Multiple serial devices detected | In single mode, the script lets you pick. In batch mode, it auto-selects. Unplug other USB serial devices if you get unexpected behavior. |
 | Permission denied on serial port | Linux: `sudo usermod -a -G dialout $USER` then log out and back in. macOS: should work out of the box. |
 
 ### Building from Source
 
 Only needed if you want to modify the firmware. Requires [PlatformIO](https://platformio.org/).
-
-This project is **dual-target**. `pio run` with no `-e` builds the C6 (the
-default env); pass `-e` to pick a board explicitly:
+Single target — `pio run` builds it:
 
 ```bash
-# XIAO ESP32-C6 (default)
-pio run -e seeed_xiao_esp32c6            # build
-pio run -e seeed_xiao_esp32c6 -t upload  # flash directly
-pio device monitor -e seeed_xiao_esp32c6 -b 115200
-
-# XIAO ESP32-S3 (original)
-pio run -e seeed_xiao_esp32s3
-pio run -e seeed_xiao_esp32s3 -t upload
-
-# Heltec WiFi LoRa 32 V4 (ESP32-S3)
-pio run -e heltec_wifi_lora_32_v4
-pio run -e heltec_wifi_lora_32_v4 -t upload
+pio run                      # build
+pio run -t upload            # build + flash over USB
+pio device monitor -b 115200 # serial
 ```
 
-> The C6 needs Arduino-ESP32 core 3.x, which the stock PlatformIO `espressif32`
-> platform doesn't ship — `platformio.ini` points the C6 env at the **pioarduino**
-> platform (a Seeed-platform alternative is commented in-line). First build pulls
-> a large toolchain. Verified building on core 3.3.11 / NimBLE 2.5.1. See
-> **[PORTING_ESP32C6.md](PORTING_ESP32C6.md)** for the full story of the port, C6
-> wiring, and limitations.
+The board is an ESP32-S3, so it builds on the standard `espressif32` (Arduino
+core 2.x) platform — no special toolchain. The first build downloads it.
 
-The S3 build output lands in `.pio/build/seeed_xiao_esp32s3/firmware.bin` (C6:
-`.pio/build/seeed_xiao_esp32c6/`). To use the flasher script instead, copy the
-S3 build artifacts into `firmware/` (C6 → `firmware-c6/`, then `flash.py --c6`):
+To use the flasher script instead, copy the build artifacts into
+`firmware-heltec/` (see `firmware-heltec/README.txt`), then run `python3 flash.py`:
 
 ```bash
-cp .pio/build/seeed_xiao_esp32s3/bootloader.bin firmware/
-cp .pio/build/seeed_xiao_esp32s3/partitions.bin firmware/
-cp ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin firmware/
-cp .pio/build/seeed_xiao_esp32s3/firmware.bin firmware/oui-spy-unified-blue.bin
+cp .pio/build/heltec_wifi_lora_32_v4/bootloader.bin firmware-heltec/
+cp .pio/build/heltec_wifi_lora_32_v4/partitions.bin firmware-heltec/
+cp .pio/build/heltec_wifi_lora_32_v4/firmware.bin   firmware-heltec/oui-spy-unified-blue.bin
+find ~/.platformio/packages -path '*framework-arduinoespressif32*tools/partitions/boot_app0.bin' | head -1 | xargs -I{} cp {} firmware-heltec/
 ```
+
+> **Bench testing tip:** build with `-DOUISPY_FORCE_MODE=<n>` (e.g. via
+> `PLATFORMIO_BUILD_FLAGS="-DOUISPY_FORCE_MODE=4"`) to boot straight into a mode,
+> bypassing the web selector — handy when you can't reach the AP.
 
 **Build dependencies** (managed by PlatformIO):
 
 - `NimBLE-Arduino` -- BLE scanning
 - `ESP Async WebServer` + `AsyncTCP` -- web interfaces
 - `ArduinoJson` -- JSON serialization
-- `Adafruit NeoPixel` -- LED control
+- `Adafruit NeoPixel` -- LED control (external NeoPixel)
+- `Adafruit SSD1306` + `Adafruit GFX` -- on-board OLED
 
-**Flash layout:** S3 — ~6 MB app + ~2 MB filesystem (`partitions.csv`, 8 MB flash).
-C6 — ~2.8 MB app + ~1 MB SPIFFS (`partitions_4mb.csv`, 4 MB flash).
-Heltec V4 — ~6 MB app + 2 MB SPIFFS (`partitions_16mb.csv`, 16 MB flash; SPIFFS
-is kept small because it mounts unreliably on large partitions).
+**Flash layout:** ~6 MB app + 2 MB SPIFFS (`partitions_16mb.csv`, 16 MB flash;
+SPIFFS is kept small because it mounts unreliably on large partitions).
 
 ---
 
@@ -416,7 +407,7 @@ Each firmware is available as a standalone project:
 ## Credits
 
 - **Original firmware and the six modes:** **[colonelpanichacks](https://github.com/colonelpanichacks)** — the XIAO ESP32-S3 [OUI-SPY Unified Blue](https://github.com/colonelpanichacks/oui-spy-unified-blue) project this repository is forked from.
-- **ESP32-C6 port:** this fork, [Aediliss](https://github.com/Aediliss/oui-spy-unified-c6) — adds the XIAO ESP32-C6 build target while keeping the S3 build intact.
+- **Heltec WiFi LoRa 32 V4 port:** this fork, [Aediliss](https://github.com/Aediliss/oui-spy-unified-heltec) — ports the firmware to the Heltec V4 and adds the on-board OLED status/stats display.
 
 ---
 

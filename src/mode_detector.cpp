@@ -22,8 +22,6 @@
 #include <algorithm>
 #include <Adafruit_NeoPixel.h>
 #include "modes.h"
-#include "compat_esp32c6.h"   // C6: buzzer/pin/single-core shim (no-op on S3)
-#include "nimble_compat_c6.h"  // C6: NimBLE 2.x scan-API bridge (no-op on S3)
 
 // Rename setup/loop to avoid conflict with Arduino entry points
 #define setup detector_ns_setup
@@ -40,3 +38,6 @@ namespace {
 // Exported mode entry points (called from main.cpp)
 void detector_setup() { detector_ns_setup(); }
 void detector_loop()  { detector_ns_loop(); }
+
+// OLED headline stat: number of devices currently tracked.
+int detector_stat() { return (int)devices.size(); }

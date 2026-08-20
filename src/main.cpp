@@ -16,11 +16,11 @@
 #include <DNSServer.h>
 #include <Preferences.h>
 #include "modes.h"
-#include "compat_esp32c6.h"   // C6: buzzer/pin/single-core shim (no-op on S3)
+#include "oled_status.h"      // Heltec on-board OLED status display
 
-// Hardware pins (shared across all modes).
-// #ifndef-guarded so the C6 build can override these from compat_esp32c6.h;
-// on the XIAO ESP32-S3 the defaults below stand.
+// Hardware pins. #ifndef-guarded so the build overrides them via -D flags in
+// platformio.ini (the Heltec V4 pin map); the fallback defaults below stand
+// only if no override is passed.
 #ifndef BUZZER_PIN
 #define BUZZER_PIN 3
 #endif
@@ -457,7 +457,11 @@ void setup() {
     digitalWrite(BUZZER_PIN, LOW);
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);  // LED off (inverted logic on XIAO)
-    
+
+    // On-board OLED (Heltec only; no-op elsewhere). Init early so the boot
+    // splash shows; this logs to Serial before any mode takes over the port.
+    oled_begin();
+
     // CRITICAL: Nuke ALL stored WiFi config from NVS.
     // The ESP32 persists AP SSID/password in flash and auto-restores it,
     // causing stale APs from previous firmware to appear on every boot.
@@ -571,6 +575,9 @@ void setup() {
     
     Serial.println("[OUI-SPY] ========== MODE STARTED ==========\n");
     Serial.flush();
+
+    // Mode is up (AP started if it has one) — draw the status screen.
+    oled_show(currentMode);
 }
 
 // ============================================================================
@@ -612,7 +619,10 @@ static void checkBootButtonLoop() {
 void loop() {
     // ALWAYS check boot button - hold 2s from ANY mode to return to menu
     checkBootButtonLoop();
-    
+
+    // Refresh the on-board OLED (Heltec only; throttled to ~1 Hz internally).
+    oled_tick(currentMode);
+
     // Route to active mode's loop
     switch (currentMode) {
         case 1: detector_loop(); break;

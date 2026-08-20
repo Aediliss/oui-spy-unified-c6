@@ -9,3 +9,6 @@ __pycache__/
 
 # local reference clone of the S3 upstream — not part of the port
 upstream/
+
+# auto-generated ESP-IDF component manifest (build artifact)
+src/idf_component.yml
