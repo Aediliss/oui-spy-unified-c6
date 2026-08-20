@@ -1,23 +1,30 @@
 # OUI Spy Unified Blue – Multi-Mode BLE/WiFi Surveillance Detection Firmware
 
-Six-mode unified firmware for Seeed Studio XIAO ESP32-S3 (and XIAO ESP32-C6) with boot selector menu. Detects surveillance hardware, drones, and BLE tracking devices.
+Six-mode unified firmware for Seeed Studio XIAO ESP32-S3, XIAO ESP32-C6, and Heltec WiFi LoRa 32 V4, with boot selector menu. Detects surveillance hardware, drones, and BLE tracking devices.
 
 ## Hardware
 
-Dual-target. The C6 port lives entirely in `src/compat_esp32c6.h` (active only
-when `CONFIG_IDF_TARGET_ESP32C6`) plus `#ifndef`-guarded pin defines; the S3
-build is unchanged. See `PORTING_ESP32C6.md`.
+Three targets. The C6 port lives in `src/compat_esp32c6.h` (active only when
+`CONFIG_IDF_TARGET_ESP32C6`) + `src/nimble_compat_c6.h` + `#ifndef`-guarded pin
+defines. The Heltec V4 is another ESP32-S3, so it reuses the S3 code path with
+no shims — just a new env + pins injected via `-D` flags. The XIAO-S3 build is
+unchanged. See `PORTING_ESP32C6.md` and the `platformio.ini` env comments.
 
-| Signal | XIAO ESP32-S3 | XIAO ESP32-C6 |
-|---|---|---|
-| Buzzer (PWM) | GPIO 3 | GPIO 2 (D2) |
-| LED (inverted, HIGH=OFF) | GPIO 21 | GPIO 15 (onboard) |
-| Boot button (hold 1.5–2s) | GPIO 0 | GPIO 9 (onboard) |
-| NeoPixel (Detector) | GPIO 4 | GPIO 1 (D1) |
-| Flock-You Serial1 mirror | GPIO 43 | GPIO 20 (D9) |
+| Signal | XIAO ESP32-S3 | XIAO ESP32-C6 | Heltec WiFi LoRa 32 V4 |
+|---|---|---|---|
+| Buzzer (PWM) | GPIO 3 | GPIO 2 (D2) | GPIO 7 (external only) |
+| LED (inverted logic) | GPIO 21 (HIGH=OFF) | GPIO 15 (onboard) | GPIO 35 (onboard, active-**high** → reads inverted) |
+| Boot button (hold 1.5–2s) | GPIO 0 | GPIO 9 (onboard) | GPIO 0 (PRG) |
+| NeoPixel (Detector) | GPIO 4 | GPIO 1 (D1) | GPIO 4 (external only) |
+| Flock-You Serial1 mirror | GPIO 43 | GPIO 20 (D9) | GPIO 43 |
 
-- C6 differences: single-core RISC-V @ 160 MHz, **no PSRAM**, 4 MB flash,
-  USB-Serial-JTAG. Arduino core 3.x required (Seeed/pioarduino platform).
+- C6: single-core RISC-V @ 160 MHz, **no PSRAM**, 4 MB flash, USB-Serial-JTAG.
+  Arduino core 3.x required (pioarduino platform).
+- Heltec V4: ESP32-S3 @ 240 MHz, **2 MB quad PSRAM** (`qio_qspi`), 16 MB flash,
+  native USB. Core 2.x (espressif32), same as the XIAO S3. GPIO21 is the OLED
+  reset here (not an LED); no onboard buzzer/NeoPixel. All modes tested on-device.
+- Build/flash test hook: `-DOUISPY_FORCE_MODE=<n>` boots straight into mode n
+  (bypassing the web selector) and prints PSRAM/heap — inert in normal builds.
 
 ## Modes
 
@@ -39,6 +46,9 @@ pio run -e seeed_xiao_esp32c6 -t upload
 # S3
 pio run -e seeed_xiao_esp32s3
 pio run -e seeed_xiao_esp32s3 -t upload
+# Heltec WiFi LoRa 32 V4
+pio run -e heltec_wifi_lora_32_v4
+pio run -e heltec_wifi_lora_32_v4 -t upload
 pio device monitor -b 115200
 ```
 

@@ -1,0 +1,11 @@
+# OUI-SPY partition table for the Heltec WiFi LoRa 32 V4 (16 MB flash, 2 MB PSRAM).
+# App image is ~1.4 MB; a 6 MB app slot leaves generous headroom. SPIFFS is kept
+# at 2 MB — SPIFFS mounts/formats unreliably on large partitions, and Flock-You
+# only stores a small session JSON. The upper ~8 MB of flash is left unused
+# (harmless) rather than handed to an oversized, flaky SPIFFS.
+#
+# Name,   Type, SubType,  Offset,   Size,     Flags
+nvs,      data, nvs,      0x9000,   0x5000,
+otadata,  data, ota,      0xe000,   0x2000,
+app0,     app,  ota_0,    0x10000,  0x600000,
+spiffs,   data, spiffs,   0x610000, 0x200000,

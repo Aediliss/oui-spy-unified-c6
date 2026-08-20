@@ -372,7 +372,7 @@ void initializeBuzzer() {
   ssBuzzerOn = bzP.getBool("on", true);
   bzP.end();
 
-  Serial.printf("Buzzer initialized on GPIO3 (%s)\n", ssBuzzerOn ? "ON" : "OFF");
+  Serial.printf("Buzzer initialized on GPIO%d (%s)\n", BUZZER_PIN, ssBuzzerOn ? "ON" : "OFF");
 }
 
 // Close Encounters of the Third Kind - iconic 5-note motif
@@ -404,7 +404,7 @@ void playCloseEncounters() {
 void initializeLED() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH); // Turn off LED initially (inverted logic)
-  Serial.println("Orange LED initialized on GPIO21 (inverted logic)");
+  Serial.printf("LED initialized on GPIO%d (inverted logic)\n", LED_PIN);
 }
 
 void setup() {

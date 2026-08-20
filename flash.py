@@ -368,24 +368,34 @@ def main():
     do_erase = "--erase" in args
     do_batch = "--batch" in args
     do_c6 = "--c6" in args
+    do_heltec = "--heltec" in args
     bin_path = None
+    global CHIP, FIRMWARE_DIR, FLASH_SIZE
 
     # --c6: flash a Seeed XIAO ESP32-C6 build instead of the default S3.
     # Same flash offsets, but a different chip id, 4 MB size, and bins from
     # firmware-c6/. Build them first with: pio run -e seeed_xiao_esp32c6
     if do_c6:
-        global CHIP, FIRMWARE_DIR, FLASH_SIZE
         CHIP = "esp32c6"
         FLASH_SIZE = "4MB"
         FIRMWARE_DIR = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "firmware-c6")
 
+    # --heltec: flash a Heltec WiFi LoRa 32 V4 build. Same chip family as the
+    # XIAO S3 (esp32s3) and same offsets, but 16 MB flash and bins from
+    # firmware-heltec/. Build them first with: pio run -e heltec_wifi_lora_32_v4
+    if do_heltec:
+        CHIP = "esp32s3"
+        FLASH_SIZE = "16MB"
+        FIRMWARE_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "firmware-heltec")
+
     for a in args:
-        if a in ("--erase", "--batch", "--c6"):
+        if a in ("--erase", "--batch", "--c6", "--heltec"):
             continue
         if a in ("-h", "--help"):
             print("""
-  Usage:  python flash.py [firmware.bin] [--erase] [--batch] [--c6]
+  Usage:  python flash.py [firmware.bin] [--erase] [--batch] [--c6|--heltec]
 
   Options:
     firmware.bin   Path to .bin file (auto-detects from firmware/ folder)
@@ -393,6 +403,8 @@ def main():
     --batch        Batch mode: flash multiple boards one after another
     --c6           Flash a XIAO ESP32-C6 build (chip esp32c6, 4MB,
                    bins from firmware-c6/). Default is XIAO ESP32-S3.
+    --heltec       Flash a Heltec WiFi LoRa 32 V4 build (chip esp32s3, 16MB,
+                   bins from firmware-heltec/). Default is XIAO ESP32-S3.
 
   Single board (default):
     python flash.py

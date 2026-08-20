@@ -123,3 +123,32 @@
   (GPIO1); onboard LED (GPIO15) and BOOT button (GPIO9) need no wiring.
   Full details: PORTING_ESP32C6.md
 ==============================================================================
+
+
+==============================================================================
+  HELTEC WiFi LoRa 32 V4 VARIANT
+==============================================================================
+
+  Also an ESP32-S3 (16 MB flash, 2 MB PSRAM, native USB), so it reuses the
+  XIAO-S3 toolchain. Verified binaries are already in firmware-heltec/; rebuild
+  them only if you change the firmware:
+
+     pio run -e heltec_wifi_lora_32_v4
+
+  Easiest flash path (PlatformIO flashes directly, no flash.py needed):
+
+     pio run -e heltec_wifi_lora_32_v4 -t upload
+
+  Or use this flasher with the bins in firmware-heltec/:
+
+     python flash.py --heltec
+
+  Offsets are identical to the S3 (bootloader 0x0, partitions 0x8000,
+  boot_app0 0xe000, app 0x10000); --heltec just targets chip esp32s3 / 16MB.
+
+  Board notes: no on-board buzzer or NeoPixel (audible/RGB alerts are silent
+  unless you wire external parts to GPIO7 / GPIO4); the on-board white LED
+  (GPIO35) reads inverted; GPIO21 is the OLED reset (not an LED). All six modes
+  are verified running on the hardware. Full pin map: see the
+  [env:heltec_wifi_lora_32_v4] block in platformio.ini.
+==============================================================================

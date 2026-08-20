@@ -501,6 +501,19 @@ void setup() {
         }
     }
     
+    // --- Test hook: inert unless built with -DOUISPY_FORCE_MODE=<n>. Boots
+    // straight into a mode (bypassing the web selector) and reports PSRAM/heap,
+    // so modes can be exercised over serial without joining the AP.
+#ifdef OUISPY_FORCE_MODE
+    currentMode = (OUISPY_FORCE_MODE);
+    Serial.printf("[TEST] forced mode=%d | PSRAM found=%s size=%uKB free=%uKB | heap free=%uKB\n",
+                  currentMode, psramFound() ? "yes" : "no",
+                  (unsigned)(ESP.getPsramSize() / 1024),
+                  (unsigned)(ESP.getFreePsram() / 1024),
+                  (unsigned)(ESP.getFreeHeap() / 1024));
+    Serial.flush();
+#endif
+
     Serial.printf("[OUI-SPY] FINAL BOOT MODE: %d\n", currentMode);
     Serial.println("========================================");
     Serial.flush();
