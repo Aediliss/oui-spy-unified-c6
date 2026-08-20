@@ -5,13 +5,15 @@ second build target, the Seeed XIAO **ESP32-C6**, without disturbing the S3
 build. All six modes (Detector, Foxhunter, Flock-You WiFi, PCAP, Sky Spy, BLE
 Sniff) and the boot selector are included.
 
-> **Status:** ✅ **Compiles clean for the C6.** Verified with PlatformIO +
-> pioarduino (Arduino-ESP32 core 3.3.11, ESP-IDF 5.5, NimBLE-Arduino 2.5.1):
-> `pio run -e seeed_xiao_esp32c6` → SUCCESS, 0 errors. Output is a RISC-V image
-> with chip id `0x000D` (ESP32-C6); **RAM 28.8%, Flash 59.3%** (1.77 MB app in
-> the 2.875 MB partition). Prebuilt binaries are in `firmware-c6/`.
-> On-hardware runtime behaviour (especially BLE scanning under NimBLE 2.x)
-> should still be sanity-checked on a real board — see *Runtime behaviour*.
+> **Status:** ✅ **Builds, flashes, and runs on a real XIAO ESP32-C6.** Verified
+> with PlatformIO + pioarduino (Arduino-ESP32 core 3.3.11, ESP-IDF 5.5,
+> NimBLE 2.5.1, ESPAsyncWebServer 3.12.0 / AsyncTCP 3.5.0): `pio run
+> -e seeed_xiao_esp32c6 -t upload` → SUCCESS. RISC-V image, chip id `0x000D`;
+> **RAM 28.8%, Flash 59.3%** (1.85 MB app in the 2.875 MB partition). On the
+> device it boots cleanly, starts the `oui-spy` AP at 192.168.4.1, brings the
+> web server up, and reaches steady state (no boot loop). Prebuilt binaries are
+> in `firmware-c6/`. BLE-scanning behaviour under NimBLE 2.x is worth a spot
+> check on your specific targets, but the firmware itself runs.
 
 ---
 
@@ -78,8 +80,19 @@ same mode sources build against both:
   for both NimBLE versions so the (lightly edited) call sites are identical on
   S3 and C6. `platformio.ini` pins NimBLE per-env: S3 → 1.4.x, C6 → 2.x.
 
+### Async web stack — esp32async fork on the C6
+The C6 SDK enables lwIP TCPIP **core-locking** (`CONFIG_LWIP_TCPIP_CORE_LOCKING=y`,
+`CONFIG_LWIP_CHECK_THREAD_SAFETY=y`). The old AsyncTCP 3.1.4 calls `tcp_alloc()`
+without holding that lock, so the device *compiled fine but crashed on boot* at
+`server.begin()` with `assert failed: tcp_alloc ... Required to lock TCPIP core
+functionality!`, boot-looping. Fix: the C6 env uses the maintained
+**esp32async** fork — `esp32async/ESPAsyncWebServer@^3.12.0` +
+`esp32async/AsyncTCP@^3.5.0` — which takes the core lock. (The S3 env keeps
+`mathieucarbou/...@3.0.6 / 3.1.4`, which is correct for its older SDK.) This is
+the one bug that only surfaced on hardware, not at compile time.
+
 ### `platformio.ini` — now dual-target
-- `env:seeed_xiao_esp32s3` — the original, unchanged (NimBLE 1.4.x).
+- `env:seeed_xiao_esp32s3` — the original, unchanged (NimBLE 1.4.x, mathieucarbou async).
 - `env:seeed_xiao_esp32c6` — new. Uses the **pioarduino** platform (Seeed's own
   platform is a commented alternative — it reports its name as `SeeedStudio`,
   which trips the compat gate on the `espressif32`-only ESPAsyncWebServer/
